@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "루틴 타이머",
+    "slug": "timemaster",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0a1e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.timemaster.app",
+      "infoPlist": {}
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0a1e"
+      },
+      "package": "com.timemaster.app"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#a855f7"
+        }
+      ],
+      "expo-asset"
+    ],
+    "scheme": "timemaster"
+  }
+}
