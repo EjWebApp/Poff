@@ -1,16 +1,23 @@
 {
-  "name": "timemaster-mobile",
+  "name": "poff",
   "version": "0.0.1",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:web": "expo export -p web",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@supabase/supabase-js": "^2.97.0",
+    "drizzle-orm": "^0.45.1",
     "expo": "~52.0.0",
     "expo-asset": "~11.0.5",
     "expo-haptics": "~14.0.0",
@@ -18,6 +25,7 @@
     "expo-router": "~4.0.0",
     "expo-status-bar": "~2.0.0",
     "lucide-react-native": "^0.460.0",
+    "postgres": "^3.4.8",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.2",
@@ -26,11 +34,14 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
     "react-native-toast-message": "^2.2.0",
+    "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "~0.19.13"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.9",
     "typescript": "~5.3.0"
   },
   "private": true

@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "루틴 타이머",
-    "slug": "timemaster",
+    "name": "Poff",
+    "slug": "poff",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f0a1e"
+      "backgroundColor": "#fffef9"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.timemaster.app",
+      "bundleIdentifier": "com.poff.app",
       "infoPlist": {}
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f0a1e"
+        "backgroundColor": "#fffef9"
       },
-      "package": "com.timemaster.app"
+      "package": "com.poff.app"
     },
     "plugins": [
       "expo-router",
@@ -30,11 +30,11 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#a855f7"
+          "color": "#d97706"
         }
       ],
       "expo-asset"
     ],
-    "scheme": "timemaster"
+    "scheme": "poff"
   }
 }

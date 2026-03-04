@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Play } from 'lucide-react-native';
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,24 +9,57 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { Task } from './types';
 
+function formatSavedTime(minutes: number): string {
+  if (minutes >= 60) {
+    return minutes % 60 === 0
+      ? `${Math.floor(minutes / 60)}시간`
+      : `${Math.floor(minutes / 60)}시간 ${minutes % 60}분`;
+  }
+  return `${minutes}분`;
+}
+
 interface TaskListProps {
   tasks: Task[];
   currentIndex: number;
+  progress?: number;
+  schedule?: { startTime: number; endTime: number }[] | null;
+  passedTasks?: Record<number, number>;
+  reflection?: string;
+  onReflectionChange?: (text: string) => void;
+  taskMemos?: Record<number, string>;
+  onTaskMemoChange?: (index: number, text: string) => void;
 }
 
-export function TaskList({ tasks, currentIndex }: TaskListProps) {
+export function TaskList({ tasks, currentIndex, progress = 0, schedule, passedTasks = {}, reflection = '', onReflectionChange, taskMemos = {}, onTaskMemoChange }: TaskListProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>오늘 루틴</Text>
+      {tasks.length > 0 && (
+        <View style={styles.reflectionWrap}>
+          <Text style={styles.reflectionLabel}>메모</Text>
+          <TextInput
+            style={styles.reflectionInput}
+            placeholder="루틴 메모를 입력하세요"
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            value={reflection}
+            onChangeText={onReflectionChange}
+            multiline
+            numberOfLines={2}
+          />
+        </View>
+      )}
+      <Text style={styles.label}>오늘의 계획</Text>
       {tasks.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>루틴을 입력하고 시작하세요</Text>
-        </View>
+<Text style={styles.emptyText}>오늘의 계획을 입력하고 시작하세요</Text>        </View>
       ) : (
         <View style={styles.list}>
           {tasks.map((task, index) => {
             const isDone = index < currentIndex;
             const isCurrent = index === currentIndex;
+            const timeSlot = schedule && schedule[index];
+            const savedMinutes = passedTasks[index];
+            const memo = taskMemos[index];
+            const itemProgress = isDone ? 1 : isCurrent ? progress : 0;
             return (
               <TaskItem
                 key={index}
@@ -34,6 +67,12 @@ export function TaskList({ tasks, currentIndex }: TaskListProps) {
                 isDone={isDone}
                 isCurrent={isCurrent}
                 index={index}
+                startTime={timeSlot?.startTime}
+                endTime={timeSlot?.endTime}
+                savedMinutes={savedMinutes}
+                memo={memo}
+                onMemoChange={(text) => onTaskMemoChange?.(index, text)}
+                progress={itemProgress}
               />
             );
           })}
@@ -48,11 +87,23 @@ function TaskItem({
   isDone,
   isCurrent,
   index,
+  startTime,
+  endTime,
+  savedMinutes,
+  memo,
+  onMemoChange,
+  progress = 0,
 }: {
   task: Task;
   isDone: boolean;
   isCurrent: boolean;
   index: number;
+  startTime?: number;
+  endTime?: number;
+  savedMinutes?: number;
+  memo?: string;
+  onMemoChange?: (text: string) => void;
+  progress?: number;
 }) {
   const opacity = useSharedValue(0);
   const translateX = useSharedValue(-20);
@@ -76,32 +127,57 @@ function TaskItem({
         animatedStyle,
       ]}
     >
-      <View style={styles.itemContent}>
-        <View style={styles.iconWrap}>
-          {isDone ? (
-            <CheckCircle2 size={18} color="#4ade80" />
-          ) : isCurrent ? (
-            <Play size={18} color="#a855f7" fill="#a855f7" />
-          ) : (
-            <Circle size={18} color="rgba(255,255,255,0.2)" />
-          )}
+      <View style={styles.itemBody}>
+        <View style={styles.itemContent}>
+          <View style={styles.iconWrap}>
+            {isDone ? (
+              <CheckCircle2 size={18} color="#9ca3af" />
+            ) : isCurrent ? (
+              <Play size={18} color="#d97706" fill="#d97706" />
+            ) : (
+              <Circle size={18} color="#d1d5db" />
+            )}
+          </View>
+          <View style={styles.itemText}>
+            <Text
+              style={[
+                styles.taskTitle,
+                isDone && styles.taskTitleDone,
+              ]}
+              numberOfLines={1}
+            >
+              {task.title}
+            </Text>
+            <Text style={styles.taskDuration}>{task.minutes}분</Text>
+            {startTime != null && endTime != null && (
+              <Text style={styles.taskTime}>
+                {new Date(startTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} ~ {new Date(endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            )}
+            {savedMinutes != null && savedMinutes > 0 && (
+              <Text style={styles.taskSaved}>
+                ⏭ {formatSavedTime(savedMinutes)} 절약
+              </Text>
+            )}
+          </View>
         </View>
-        <View style={styles.itemText}>
-          <Text
-            style={[
-              styles.taskTitle,
-              isDone && styles.taskTitleDone,
-            ]}
-            numberOfLines={1}
-          >
-            {task.title}
-          </Text>
-          <Text style={styles.taskDuration}>{task.minutes}분</Text>
-        </View>
+        <Text style={styles.status}>
+          {isDone ? (savedMinutes != null ? '패스' : '완료') : isCurrent ? '진행중' : '대기'}
+        </Text>
       </View>
-      <Text style={styles.status}>
-        {isDone ? '완료' : isCurrent ? '진행중' : '대기'}
-      </Text>
+      <View style={styles.progressTrack}>
+        <View
+          style={[styles.progressBar, { width: `${Math.min(100, progress * 100)}%` }]}
+        />
+      </View>
+      <TextInput
+        style={styles.taskMemoInput}
+        placeholder="메모"
+        placeholderTextColor="#9ca3af"
+        value={memo ?? ''}
+        onChangeText={onMemoChange}
+        multiline
+      />
     </Animated.View>
   );
 }
@@ -112,7 +188,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#6b7280',
     marginBottom: 4,
   },
   empty: {
@@ -121,28 +197,56 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   list: {
     gap: 8,
   },
   item: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  itemBody: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+  },
+  progressTrack: {
+    marginTop: 8,
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#d97706',
+    borderRadius: 999,
+  },
+  taskMemoInput: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#374151',
+    backgroundColor: '#fafaf9',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    minHeight: 36,
+    textAlignVertical: 'top',
   },
   itemCurrent: {
-    backgroundColor: 'rgba(168,85,247,0.1)',
-    borderColor: 'rgba(168,85,247,0.3)',
+    backgroundColor: '#fef3c7',
+    borderColor: '#fcd34d',
   },
   itemDone: {
-    opacity: 0.5,
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
   },
   itemContent: {
     flexDirection: 'row',
@@ -159,19 +263,49 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#fff',
+    color: '#1f2937',
   },
   taskTitleDone: {
     textDecorationLine: 'line-through',
-    color: 'rgba(255,255,255,0.4)',
+    color: '#9ca3af',
   },
   taskDuration: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: '#6b7280',
     marginTop: 4,
+  },
+  taskTime: {
+    fontSize: 11,
+    color: '#d97706',
+    marginTop: 2,
+  },
+  taskSaved: {
+    fontSize: 11,
+    color: '#ca8a04',
+    marginTop: 2,
   },
   status: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: '#6b7280',
+  },
+  reflectionWrap: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  reflectionLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  reflectionInput: {
+    backgroundColor: '#fafaf9',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1f2937',
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
 });

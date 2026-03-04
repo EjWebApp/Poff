@@ -2,25 +2,27 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadRoutineData, saveRoutineData, saveRoutineSession } from '../lib/routineStorage';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
 import Toast from 'react-native-toast-message';
-import { Timer, Info } from 'lucide-react-native';
+import { ChefHat, Info } from 'lucide-react-native';
 import { TaskInput } from '../components/TaskInput';
 import { TaskList } from '../components/TaskList';
 import type { Task } from '../components/types';
 import { TimerDisplay } from '../components/TimerDisplay';
+const STORAGE_KEY = 'routine_alarm_v1_text';
+const REFLECTION_KEY = 'routine_reflection_v1';
+const TASK_MEMOS_KEY = 'routine_task_memos_v1';
 import { Controls } from '../components/Controls';
 import { PermissionStatus } from '../components/PermissionStatus';
 
-const STORAGE_KEY = 'routine_alarm_v1_text';
 const SAMPLE_TEXT = `차준비ㅡ20
 국민연금 납부ㅡ10
 MyYieldWeb 작업ㅡ1시간
@@ -52,6 +54,11 @@ export default function HomeScreen() {
   const [status, setStatus] = useState('대기중');
   const [isPaused, setIsPaused] = useState(false);
   const [permission, setPermission] = useState<PermissionStatusType>('checking');
+  const [schedule, setSchedule] = useState<{ startTime: number; endTime: number }[] | null>(null);
+  const [passedTasks, setPassedTasks] = useState<Record<number, number>>({});
+  const [reflection, setReflection] = useState('');
+  const [taskMemos, setTaskMemos] = useState<Record<number, string>>({});
+  const [subtitle, setSubtitle] = useState('시간을 부탁해!');
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const taskStartRef = useRef(0);
@@ -59,6 +66,7 @@ export default function HomeScreen() {
   const totalSecsRef = useRef(0);
   const pausedAccumRef = useRef(0);
   const pauseAtRef = useRef(0);
+  const originalScheduleRef = useRef<{ startTime: number; endTime: number }[] | null>(null);
 
   // Initialize
   useEffect(() => {
@@ -68,10 +76,16 @@ export default function HomeScreen() {
 
   async function loadSavedText() {
     try {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      setInputText(saved || SAMPLE_TEXT);
+      const data = await loadRoutineData();
+      setInputText(data.inputText || SAMPLE_TEXT);
+      setReflection(data.reflection);
+      setTaskMemos(data.taskMemos);
+      setSubtitle(data.subtitle);
     } catch {
       setInputText(SAMPLE_TEXT);
+      setReflection('');
+      setTaskMemos({});
+      setSubtitle('시간을 부탁해해');
     }
   }
 
@@ -137,7 +151,7 @@ export default function HomeScreen() {
     }
   }
 
-  async function notify(title: string, body: string) {
+  async function notify(title: string, body: string, options?: { visibilityTime?: number }) {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
@@ -149,6 +163,7 @@ export default function HomeScreen() {
       text1: title,
       text2: body,
       position: 'top',
+      visibilityTime: options?.visibilityTime ?? 4000,
     });
 
     try {
@@ -250,6 +265,36 @@ export default function HomeScreen() {
     return { tasks, errors };
   }
 
+  function computeSchedule(tasksList: Task[], baseStart: number): { startTime: number; endTime: number }[] {
+    const result: { startTime: number; endTime: number }[] = [];
+    let cursor = baseStart;
+    for (const t of tasksList) {
+      const start = cursor;
+      const end = cursor + t.minutes * 60 * 1000;
+      result.push({ startTime: start, endTime: end });
+      cursor = end;
+    }
+    return result;
+  }
+
+  /** 패스한 작업들의 절약 시간만큼 이후 스케줄을 앞당김 */
+  function computeAdjustedSchedule(
+    baseSchedule: { startTime: number; endTime: number }[],
+    passed: Record<number, number>,
+    tasksList: Task[]
+  ): { startTime: number; endTime: number }[] {
+    return baseSchedule.map((slot, i) => {
+      const totalSaved = Object.entries(passed).reduce(
+        (sum, [k, v]) => sum + (Number(k) < i ? v : 0),
+        0
+      );
+      const shiftMs = totalSaved * 60 * 1000;
+      const start = slot.startTime - shiftMs;
+      const end = start + (tasksList[i]?.minutes ?? 0) * 60 * 1000;
+      return { startTime: start, endTime: end };
+    });
+  }
+
   function startTask(index: number) {
     setCurrentIndex(index);
     setIsPaused(false);
@@ -258,8 +303,15 @@ export default function HomeScreen() {
 
     const task = tasks[index];
     totalSecsRef.current = task.minutes * 60;
-    taskStartRef.current = Date.now();
+    const now = Date.now();
+    taskStartRef.current = now;
     taskEndRef.current = taskStartRef.current + totalSecsRef.current * 1000;
+
+    if (index === 0) {
+      const base = computeSchedule(tasks, now);
+      originalScheduleRef.current = base;
+      setSchedule(base);
+    }
 
     setStatus(
       `진행: ${index + 1}/${tasks.length} · 시작: ${new Date().toLocaleTimeString()}`
@@ -267,7 +319,7 @@ export default function HomeScreen() {
     notify('🟦 루틴 시작', `${task.title} (${task.minutes}분) 시작!`);
   }
 
-  function finishTask() {
+  function finishTask(isPass = false) {
     if (currentIndex < 0 || currentIndex >= tasks.length) return;
 
     if (timerRef.current) {
@@ -276,9 +328,42 @@ export default function HomeScreen() {
     }
 
     const task = tasks[currentIndex];
-    notify('✅ 루틴 종료', `${task.title} 종료! 다음으로 넘어갈게.`);
-
     const next = currentIndex + 1;
+    if (isPass) {
+      const m = task.minutes;
+      const saved =
+        m >= 60
+          ? m % 60 === 0
+            ? `${Math.floor(m / 60)}시간`
+            : `${Math.floor(m / 60)}시간 ${m % 60}분`
+          : `${m}분`;
+      const newPassed = { ...passedTasks, [currentIndex]: m };
+      setPassedTasks(newPassed);
+      const base = originalScheduleRef.current;
+      if (base) {
+        let adjusted = computeAdjustedSchedule(base, newPassed, tasks);
+        if (next < tasks.length) {
+          const nextStartAt = Date.now() + 300;
+          adjusted = [...adjusted];
+          adjusted[next] = {
+            startTime: nextStartAt,
+            endTime: nextStartAt + tasks[next].minutes * 60 * 1000,
+          };
+          for (let i = next + 1; i < adjusted.length; i++) {
+            const start = adjusted[i - 1].endTime;
+            adjusted[i] = {
+              startTime: start,
+              endTime: start + tasks[i].minutes * 60 * 1000,
+            };
+          }
+        }
+        setSchedule(adjusted);
+      }
+      notify('⏭ 패스', `${task.title} 건너뛰기 · ${saved} 절약`, { visibilityTime: 7000 });
+    } else {
+      notify('✅ 루틴 종료', `${task.title} 종료! 다음으로 넘어갈게.`);
+    }
+
     if (next < tasks.length) {
       setTimeout(() => startTask(next), 300);
     } else {
@@ -318,6 +403,12 @@ export default function HomeScreen() {
     } catch {
       // ignore
     }
+    await saveRoutineSession({
+      inputText: inputText,
+      reflection,
+      taskMemos,
+      subtitle,
+    });
     handleStop();
     setTasks(parsed.tasks);
     startTask(0);
@@ -337,6 +428,9 @@ export default function HomeScreen() {
     setIsPaused(false);
     pauseAtRef.current = 0;
     pausedAccumRef.current = 0;
+    originalScheduleRef.current = null;
+    setSchedule(null);
+    setPassedTasks({});
     setStatus('대기중');
     setRemainingTime(0);
     setProgress(0);
@@ -373,12 +467,21 @@ export default function HomeScreen() {
 
   async function handleSave() {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, inputText);
-      Toast.show({
-        type: 'success',
-        text1: '💾 저장',
-        text2: '입력한 루틴을 저장했어.',
+      const result = await saveRoutineData({
+        inputText,
+        reflection,
+        taskMemos,
+        subtitle,
       });
+      if (result.ok) {
+        Toast.show({
+          type: 'success',
+          text1: '💾 저장',
+          text2: result.fromSupabase ? '클라우드에 저장했어.' : '저장했어.',
+        });
+      } else {
+        throw new Error('Save failed');
+      }
     } catch {
       Toast.show({
         type: 'error',
@@ -389,12 +492,15 @@ export default function HomeScreen() {
 
   async function handleLoad() {
     try {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY) || SAMPLE_TEXT;
-      setInputText(saved);
+      const data = await loadRoutineData();
+      setInputText(data.inputText ? data.inputText : SAMPLE_TEXT);
+      setReflection(data.reflection);
+      setTaskMemos(data.taskMemos);
+      setSubtitle(data.subtitle);
       Toast.show({
         type: 'success',
         text1: '📥 불러오기',
-        text2: '저장된 루틴을 불러왔어.',
+        text2: '저장된 데이터를 불러왔어.',
       });
     } catch {
       setInputText(SAMPLE_TEXT);
@@ -417,19 +523,22 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
-            <Timer size={28} color="#a855f7" />
-            <Text style={styles.title}>루틴 타이머</Text>
+            <ChefHat size={28} color="#d97706" />
+            <Text style={styles.title}>Poff</Text>
           </View>
-          <Text style={styles.subtitle}>
-            입력 예시: 차준비ㅡ20 (분), MyYieldWeb 작업ㅡ1시간 (시간){'\n'}
-            시작하면 각 항목 시작/종료 때 알림이 뜬다.
-          </Text>
+          <TextInput
+            style={styles.subtitleInput}
+            value={subtitle}
+            onChangeText={setSubtitle}
+            placeholder="오늘을 가볍게, 나답게 끝내기"
+            placeholderTextColor="#9ca3af"
+          />
         </View>
 
         {/* Input Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>루틴 입력</Text>
+            <Text style={styles.cardTitle}>오늘의 계획</Text>
             <PermissionStatus permission={permission} />
           </View>
 
@@ -446,6 +555,7 @@ export default function HomeScreen() {
               onPause={handlePause}
               onResume={handleResume}
               onStop={handleStop}
+              onPass={() => finishTask(true)}
               isRunning={isRunning}
               isPaused={isPaused}
             />
@@ -453,7 +563,7 @@ export default function HomeScreen() {
 
           <View style={styles.tipBox}>
             <View style={styles.tipIcon}>
-              <Info size={14} color="rgba(255,255,255,0.5)" />
+              <Info size={14} color="#9ca3af" />
             </View>
             <Text style={styles.tipText}>
               <Text style={styles.tipBold}>모바일 팁:</Text> (1) 알림 허용, (2)
@@ -478,7 +588,19 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.card}>
-            <TaskList tasks={tasks} currentIndex={currentIndex} />
+            <TaskList
+              tasks={tasks}
+              currentIndex={currentIndex}
+              progress={progress}
+              schedule={schedule}
+              passedTasks={passedTasks}
+              reflection={reflection}
+              onReflectionChange={setReflection}
+              taskMemos={taskMemos}
+              onTaskMemoChange={(index, text) =>
+                setTaskMemos((prev) => ({ ...prev, [index]: text }))
+              }
+            />
           </View>
         </View>
       </ScrollView>
@@ -489,7 +611,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#fffef9',
   },
   scroll: {
     flex: 1,
@@ -513,20 +635,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#1f2937',
   },
-  subtitle: {
+  subtitleInput: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#6b7280',
     lineHeight: 22,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
     padding: 20,
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -537,7 +666,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: '#1f2937',
   },
   controlsWrap: {
     marginTop: 16,
@@ -547,10 +676,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#f5f5f4',
+    borderRadius: 16,
   },
   tipIcon: {
     marginTop: 2,
@@ -558,11 +685,11 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: '#6b7280',
     lineHeight: 20,
   },
   tipBold: {
-    color: 'rgba(255,255,255,0.6)',
+    color: '#374151',
     fontWeight: '600',
   },
   grid: {

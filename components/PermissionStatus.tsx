@@ -17,13 +17,13 @@ export function PermissionStatus({ permission }: PermissionStatusProps) {
   const getIcon = () => {
     switch (permission) {
       case 'granted':
-        return <Bell size={14} color="#4ade80" />;
+        return <Bell size={14} color="#059669" />;
       case 'denied':
-        return <BellOff size={14} color="#f87171" />;
+        return <BellOff size={14} color="#dc2626" />;
       case 'unsupported':
-        return <AlertCircle size={14} color="#facc15" />;
+        return <AlertCircle size={14} color="#ca8a04" />;
       default:
-        return <Bell size={14} color="rgba(255,255,255,0.4)" />;
+        return <Bell size={14} color="#9ca3af" />;
     }
   };
 
@@ -102,19 +102,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(234,179,8,0.2)',
   },
   default: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#f5f5f4',
+    borderColor: '#e5e7eb',
   },
   textGranted: {
-    color: '#86efac',
+    color: '#059669',
   },
   textDenied: {
-    color: '#fca5a5',
+    color: '#dc2626',
   },
   textUnsupported: {
-    color: '#fde047',
+    color: '#ca8a04',
   },
   textDefault: {
-    color: 'rgba(255,255,255,0.5)',
+    color: '#6b7280',
   },
 });

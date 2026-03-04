@@ -5,11 +5,11 @@ import Toast from 'react-native-toast-message';
 export default function RootLayout() {
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#020617' },
+          contentStyle: { backgroundColor: '#fffef9' },
         }}
       />
       <Toast />

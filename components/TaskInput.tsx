@@ -32,7 +32,7 @@ export function TaskInput({ value, onChange, onSave, onLoad }: TaskInputProps) {
           value={value}
           onChangeText={onChange}
           placeholder="예: 차준비ㅡ20 (한 줄에 하나씩)"
-          placeholderTextColor="rgba(255,255,255,0.4)"
+          placeholderTextColor="#9ca3af"
           multiline
           numberOfLines={6}
           textAlignVertical="top"
@@ -40,11 +40,11 @@ export function TaskInput({ value, onChange, onSave, onLoad }: TaskInputProps) {
       </View>
       <View style={styles.buttonRow}>
         <Pressable style={styles.button} onPress={onSave}>
-          <Save size={16} color="rgba(255,255,255,0.8)" />
+          <Save size={16} color="#6b7280" />
           <Text style={styles.buttonText}>저장</Text>
         </Pressable>
         <Pressable style={styles.button} onPress={onLoad}>
-          <Upload size={16} color="rgba(255,255,255,0.8)" />
+          <Upload size={16} color="#6b7280" />
           <Text style={styles.buttonText}>불러오기</Text>
         </Pressable>
       </View>
@@ -60,14 +60,12 @@ const styles = StyleSheet.create({
     minHeight: 180,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
+    backgroundColor: '#fafaf9',
+    borderRadius: 16,
   },
   input: {
     flex: 1,
-    color: '#fff',
+    color: '#1f2937',
     fontSize: 16,
     lineHeight: 26,
     padding: 0,
@@ -82,13 +80,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
+    backgroundColor: '#f5f5f4',
+    borderRadius: 12,
   },
   buttonText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: '#374151',
     fontSize: 14,
     fontWeight: '500',
   },
