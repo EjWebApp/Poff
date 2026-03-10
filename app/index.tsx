@@ -95,6 +95,22 @@ export default function HomeScreen() {
     setTasks(parsed.tasks);
   }, [inputText]);
 
+  // 실행 중 tasks가 변경되면(추가/삭제) schedule 재계산 → 시작 후 추가한 일정에도 실제 시간표시
+  // passedTasks 변경은 finishTask에서 처리하므로 의존성에서 제외
+  useEffect(() => {
+    if (currentIndex < 0 || currentIndex >= tasks.length) return;
+    const base = originalScheduleRef.current;
+    if (!base || base.length === 0) return;
+    // task 개수 변경 시에만 재계산 (finishTask의 schedule 덮어쓰기 방지)
+    if (schedule && tasks.length === schedule.length) return;
+
+    const sessionStart = base[0].startTime;
+    const newBase = computeSchedule(tasks, sessionStart);
+    originalScheduleRef.current = newBase;
+    const newAdjusted = computeAdjustedSchedule(newBase, passedTasks, tasks);
+    setSchedule(newAdjusted);
+  }, [tasks, schedule, currentIndex, passedTasks]);
+
   // Timer tick effect
   useEffect(() => {
     if (currentIndex < 0 || currentIndex >= tasks.length || isPaused) {
