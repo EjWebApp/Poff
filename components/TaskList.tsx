@@ -24,29 +24,13 @@ interface TaskListProps {
   progress?: number;
   schedule?: { startTime: number; endTime: number }[] | null;
   passedTasks?: Record<number, number>;
-  reflection?: string;
-  onReflectionChange?: (text: string) => void;
   taskMemos?: Record<number, string>;
   onTaskMemoChange?: (index: number, text: string) => void;
 }
 
-export function TaskList({ tasks, currentIndex, progress = 0, schedule, passedTasks = {}, reflection = '', onReflectionChange, taskMemos = {}, onTaskMemoChange }: TaskListProps) {
+export function TaskList({ tasks, currentIndex, progress = 0, schedule, passedTasks = {}, taskMemos = {}, onTaskMemoChange }: TaskListProps) {
   return (
     <View style={styles.container}>
-      {tasks.length > 0 && (
-        <View style={styles.reflectionWrap}>
-          <Text style={styles.reflectionLabel}>메모</Text>
-          <TextInput
-            style={styles.reflectionInput}
-            placeholder="루틴 메모를 입력하세요"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            value={reflection}
-            onChangeText={onReflectionChange}
-            multiline
-            numberOfLines={2}
-          />
-        </View>
-      )}
       <Text style={styles.label}>오늘의 계획</Text>
       {tasks.length === 0 ? (
         <View style={styles.empty}>
@@ -287,25 +271,5 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 12,
     color: '#6b7280',
-  },
-  reflectionWrap: {
-    marginBottom: 16,
-    gap: 8,
-  },
-  reflectionLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  reflectionInput: {
-    backgroundColor: '#fafaf9',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#1f2937',
-    minHeight: 60,
-    textAlignVertical: 'top',
   },
 });

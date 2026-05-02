@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  AppState,
 } from 'react-native';
 import {
   saveRoutine,
@@ -91,6 +92,7 @@ export default function HomeScreen() {
   const pausedAccumRef = useRef(0);
   const pauseAtRef = useRef(0);
   const originalScheduleRef = useRef<{ startTime: number; endTime: number }[] | null>(null);
+  const memoDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // 세션 기준 데이터 ref (시작 시점에 고정, finishTask 등 async 콜백에서 사용)
   const sessionBaseRef = useRef<Pick<ActiveSessionData,
@@ -100,6 +102,49 @@ export default function HomeScreen() {
   useEffect(() => {
     loadInitialData();
     checkNotificationPermission();
+  }, []);
+
+  // 항상 최신 세션 상태를 즉시 저장할 수 있는 함수 ref
+  const saveNowRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    saveNowRef.current = () => {
+      const base = sessionBaseRef.current;
+      if (!base || currentIndex < 0) return;
+      saveActiveSession({
+        ...base,
+        taskMemos,
+        originalSchedule: originalScheduleRef.current ?? [],
+        taskSchedule: schedule ?? originalScheduleRef.current ?? [],
+        passedTasks,
+        currentTaskIndex: currentIndex,
+        isPaused,
+        pausedAt: isPaused ? pauseAtRef.current : null,
+        pausedAccumMs: pausedAccumRef.current,
+        status: 'running',
+      }).catch(() => {});
+    };
+  }, [currentIndex, taskMemos, passedTasks, isPaused, schedule]);
+
+  // debounce: 메모 변경 후 1초 뒤 세션 저장
+  useEffect(() => {
+    if (currentIndex < 0) return;
+    if (memoDebounceRef.current) clearTimeout(memoDebounceRef.current);
+    memoDebounceRef.current = setTimeout(() => {
+      saveNowRef.current?.();
+    }, 1000);
+    return () => {
+      if (memoDebounceRef.current) clearTimeout(memoDebounceRef.current);
+    };
+  }, [taskMemos, currentIndex]);
+
+  // 앱 백그라운드/종료 시 즉시 저장
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', next => {
+      if (next === 'background' || next === 'inactive') {
+        saveNowRef.current?.();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   async function loadInitialData() {
@@ -508,6 +553,7 @@ export default function HomeScreen() {
       if (base) {
         saveActiveSession({
           ...base,
+          taskMemos,
           originalSchedule: originalScheduleRef.current ?? [],
           taskSchedule: adjustedSchedule ?? originalScheduleRef.current ?? [],
           passedTasks: newPassed,
@@ -653,6 +699,7 @@ export default function HomeScreen() {
     if (base) {
       saveActiveSession({
         ...base,
+        taskMemos,
         originalSchedule: originalScheduleRef.current ?? [],
         taskSchedule: schedule ?? originalScheduleRef.current ?? [],
         passedTasks,
@@ -680,6 +727,7 @@ export default function HomeScreen() {
     if (base) {
       saveActiveSession({
         ...base,
+        taskMemos,
         originalSchedule: originalScheduleRef.current ?? [],
         taskSchedule: schedule ?? originalScheduleRef.current ?? [],
         passedTasks,
@@ -873,8 +921,6 @@ export default function HomeScreen() {
               progress={progress}
               schedule={schedule}
               passedTasks={passedTasks}
-              reflection={reflection}
-              onReflectionChange={setReflection}
               taskMemos={taskMemos}
               onTaskMemoChange={(index, text) =>
                 setTaskMemos(prev => ({ ...prev, [index]: text }))
