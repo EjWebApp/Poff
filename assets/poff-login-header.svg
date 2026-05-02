@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="220" viewBox="0 0 400 220">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .icon-stroke { fill: none; stroke: #d97706; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .title { font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; font-size: 28px; font-weight: 700; fill: #1a1a1a; letter-spacing: -0.5px; }
+      .subtitle { font-family: -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif; font-size: 15px; font-weight: 400; fill: #8a8a8a; letter-spacing: 0.1px; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="220" rx="20" class="bg"/>
+
+  <!-- Centered group -->
+  <g transform="translate(200, 60)">
+    <!-- Lightbulb icon (32x32, centered) -->
+    <g transform="translate(-16, 0)">
+      <!-- Bulb body -->
+      <path class="icon-stroke"
+        d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/>
+      <!-- Horizontal line -->
+      <path class="icon-stroke" d="M6 17h12"/>
+    </g>
+  </g>
+
+  <!-- "Poff" title -->
+  <text x="200" y="130" text-anchor="middle" class="title">Poff</text>
+
+  <!-- Subtitle -->
+  <text x="200" y="158" text-anchor="middle" class="subtitle">이메일로 로그인</text>
+</svg>
