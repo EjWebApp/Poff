@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Supabase not configured') };
     }
     const redirectTo =
-      typeof window !== 'undefined'
+      Platform.OS === 'web'
         ? `${window.location.origin}/`
         : 'poff://';
     const { data, error } = await supabase.auth.signInWithOAuth({

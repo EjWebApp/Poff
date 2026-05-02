@@ -60,7 +60,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const emailRedirectTo =
-        typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+        Platform.OS === 'web' ? `${window.location.origin}/` : undefined;
       const { error } = await signInWithOtp(trimmedEmail, emailRedirectTo);
 
       if (error) {
