@@ -117,7 +117,7 @@ function TaskItem({
             {isDone ? (
               <CheckCircle2 size={18} color="#9ca3af" />
             ) : isCurrent ? (
-              <Play size={18} color="#d97706" fill="#d97706" />
+              <Play size={18} color="#FF8B7B" fill="#FF8B7B" />
             ) : (
               <Circle size={18} color="#d1d5db" />
             )}
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#d97706',
+    backgroundColor: '#FF8B7B',
     borderRadius: 999,
   },
   taskMemoInput: {
@@ -225,8 +225,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   itemCurrent: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fcd34d',
+    backgroundColor: '#FFF0EE',
+    borderColor: '#FF8B7B',
   },
   itemDone: {
     backgroundColor: '#f3f4f6',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   taskTime: {
     fontSize: 11,
-    color: '#d97706',
+    color: '#FF8B7B',
     marginTop: 2,
   },
   taskSaved: {

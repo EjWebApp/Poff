@@ -12,47 +12,33 @@ interface ControlsProps {
   isPaused: boolean;
 }
 
-export function Controls({
-  onStart,
-  onPause,
-  onResume,
-  onStop,
-  onPass,
-  isRunning,
-  isPaused,
-}: ControlsProps) {
+export function Controls({ onStart, onPause, onResume, onStop, onPass, isRunning, isPaused }: ControlsProps) {
   return (
     <View style={styles.container}>
       {!isRunning ? (
         <Pressable style={[styles.button, styles.buttonStart]} onPress={onStart}>
-          <Play size={18} color="#d97706" fill="#d97706" />
-          <Text style={styles.buttonText}>시작</Text>
+          <Play size={18} color="#fff" fill="#fff" />
+          <Text style={styles.buttonTextPrimary}>시작</Text>
         </Pressable>
       ) : (
         <>
           {isPaused ? (
-            <Pressable
-              style={[styles.button, styles.buttonResume]}
-              onPress={onResume}
-            >
-              <RotateCcw size={18} color="#059669" />
+            <Pressable style={[styles.button, styles.buttonResume]} onPress={onResume}>
+              <RotateCcw size={18} color="#7DD3C0" />
               <Text style={styles.buttonText}>재개</Text>
             </Pressable>
           ) : (
-            <Pressable
-              style={[styles.button, styles.buttonPause]}
-              onPress={onPause}
-            >
-              <Pause size={18} color="#374151" />
+            <Pressable style={[styles.button, styles.buttonPause]} onPress={onPause}>
+              <Pause size={18} color="#2D2D2D" />
               <Text style={styles.buttonText}>일시정지</Text>
             </Pressable>
           )}
           <Pressable style={[styles.button, styles.buttonPass]} onPress={onPass}>
-            <SkipForward size={18} color="#ca8a04" />
+            <SkipForward size={18} color="#A78BFA" />
             <Text style={styles.buttonText}>패스</Text>
           </Pressable>
           <Pressable style={[styles.button, styles.buttonStop]} onPress={onStop}>
-            <Square size={18} color="#dc2626" fill="#dc2626" />
+            <Square size={18} color="#FF8B7B" fill="#FF8B7B" />
             <Text style={styles.buttonText}>종료</Text>
           </Pressable>
         </>
@@ -73,36 +59,44 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 99,
   },
   buttonText: {
-    color: '#1f2937',
-    fontSize: 16,
+    color: '#2D2D2D',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  buttonTextPrimary: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
   buttonStart: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 1,
-    borderColor: '#fcd34d',
+    backgroundColor: '#FF8B7B',
+    shadowColor: '#FF8B7B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonPause: {
-    backgroundColor: '#f5f5f4',
+    backgroundColor: '#F5F0E8',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: 'rgba(0,0,0,0.07)',
   },
   buttonResume: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#EEF9F7',
     borderWidth: 1,
-    borderColor: '#6ee7b7',
+    borderColor: '#7DD3C0',
   },
   buttonPass: {
-    backgroundColor: '#fef9c3',
+    backgroundColor: '#F3EEFF',
     borderWidth: 1,
-    borderColor: '#fde047',
+    borderColor: '#A78BFA',
   },
   buttonStop: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#FFF0EE',
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: '#FF8B7B',
   },
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -12,7 +13,6 @@ import { router } from 'expo-router';
 import { useAuth } from '../lib/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import Toast from 'react-native-toast-message';
-import { ChefHat } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const { signInWithKakao } = useAuth();
@@ -55,7 +55,11 @@ export default function LoginScreen() {
     >
       <View style={styles.card}>
         <View style={styles.header}>
-          <ChefHat size={32} color="#d97706" />
+          <Image
+            source={require('../assets/poff.gif')}
+            style={styles.character}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Poff</Text>
           <Text style={styles.subtitle}>로그인</Text>
         </View>
@@ -83,7 +87,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fffef9',
+    backgroundColor: '#FAF7F2',
     padding: 24,
     justifyContent: 'center',
   },
@@ -103,9 +107,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1f2937',
+    fontFamily: 'Pacifico_400Regular',
+    fontSize: 20,
+    color: '#333333',
     marginTop: 8,
   },
   subtitle: {
@@ -134,6 +138,11 @@ const styles = StyleSheet.create({
   backBtnText: {
     fontSize: 14,
     color: '#9ca3af',
+  },
+  character: {
+    width: 120,
+    height: 120,
+    marginBottom: 4,
   },
   errorText: {
     fontSize: 14,

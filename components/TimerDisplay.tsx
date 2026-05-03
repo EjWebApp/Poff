@@ -38,7 +38,7 @@ export function TimerDisplay({
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={RADIUS}
-            stroke="#d97706"
+            stroke="#FF8B7B"
             strokeWidth={STROKE}
             fill="none"
             strokeDasharray={CIRCUMFERENCE}

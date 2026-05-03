@@ -10,11 +10,11 @@ module.exports = {
     slug: 'poff',
     version: '0.0.1',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/main_char.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
-      image: './assets/splash-icon.png',
+      image: './assets/main_char.png',
       resizeMode: 'contain',
       backgroundColor: '#fffef9',
     },
@@ -25,20 +25,24 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/adaptive-icon.png',
+        foregroundImage: './assets/main_char.png',
         backgroundColor: '#fffef9',
       },
       package: 'com.poff.app',
+      versionCode: 1,
     },
     plugins: [
       'expo-router',
-      ['expo-notifications', { icon: './assets/icon.png', color: '#d97706' }],
+      ['expo-notifications', { icon: './assets/main_char.png', color: '#FF8B7B' }],
       'expo-asset',
     ],
     scheme: 'poff',
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      eas: {
+        projectId: 'a41fdc9b-ba6b-4284-aaf0-b3b116e26be7',
+      },
     },
   },
 };

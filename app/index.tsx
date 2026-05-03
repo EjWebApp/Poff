@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -37,11 +38,11 @@ import { Controls } from '../components/Controls';
 import { PermissionStatus } from '../components/PermissionStatus';
 import { RoutineListModal } from '../components/RoutineListModal';
 
-const SAMPLE_TEXT = `차준비ㅡ20
-국민연금 납부ㅡ10
-MyYieldWeb 작업ㅡ1시간
-기타연습ㅡ1시간
-식사ㅡ1시간`;
+const SAMPLE_TEXT = `클라이언트 미팅 :1시간
+개발 작업 :3시간
+점심 :1시간
+이메일 답장 :30분
+운동 :1시간`;
 
 type PermissionStatusType =
   | 'granted'
@@ -53,6 +54,8 @@ type PermissionStatusType =
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -824,11 +827,15 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Blob 배경 */}
+        <View style={styles.blob1} pointerEvents="none" />
+        <View style={styles.blob2} pointerEvents="none" />
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <ChefHat size={28} color="#d97706" />
+              <ChefHat size={28} color="#FF8B7B" />
               <Text style={styles.title}>Poff</Text>
             </View>
             {isSupabaseConfigured() && (
@@ -874,6 +881,7 @@ export default function HomeScreen() {
             onNew={handleNewRoutine}
             routineName={currentRoutineName}
             onRoutineNameChange={setCurrentRoutineName}
+            isRunning={isRunning}
           />
 
           <View style={styles.controlsWrap}>
@@ -902,16 +910,27 @@ export default function HomeScreen() {
         {/* Timer & Task List */}
         <View style={styles.grid}>
           <View style={styles.card}>
-            <TimerDisplay
-              currentTask={
-                currentIndex >= 0 && currentIndex < tasks.length
-                  ? tasks[currentIndex].title
-                  : '-'
-              }
-              remainingTime={formatTime(remainingTime)}
-              progress={progress}
-              status={status}
-            />
+            {currentIndex >= tasks.length && tasks.length > 0 ? (
+              <View style={styles.completedWrap}>
+                <Image
+                  source={require('../assets/poff.gif')}
+                  style={styles.completedCharacter}
+                  resizeMode="contain"
+                />
+                <Text style={styles.completedText}>오늘 루틴 완료! 수고했어요 🎉</Text>
+              </View>
+            ) : (
+              <TimerDisplay
+                currentTask={
+                  currentIndex >= 0 && currentIndex < tasks.length
+                    ? tasks[currentIndex].title
+                    : '-'
+                }
+                remainingTime={formatTime(remainingTime)}
+                progress={progress}
+                status={status}
+              />
+            )}
           </View>
 
           <View style={styles.card}>
@@ -945,13 +964,33 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fffef9',
+    backgroundColor: '#FAF7F2',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#fffef9',
+    backgroundColor: '#FAF7F2',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  blob1: {
+    position: 'absolute',
+    top: 60,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(125,211,192,0.18)',
+    zIndex: 0,
+  },
+  blob2: {
+    position: 'absolute',
+    top: 400,
+    left: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(255,139,123,0.15)',
+    zIndex: 0,
   },
   loadingText: {
     fontSize: 16,
@@ -994,9 +1033,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1f2937',
+    fontFamily: 'Pacifico_400Regular',
+    fontSize: 20,
+    color: '#333333',
   },
   subtitleInput: {
     fontSize: 14,
@@ -1009,13 +1048,13 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 20,
     marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowRadius: 24,
     elevation: 3,
   },
   cardHeader: {
@@ -1055,5 +1094,20 @@ const styles = StyleSheet.create({
   },
   grid: {
     gap: 24,
+  },
+  completedWrap: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  completedCharacter: {
+    width: 140,
+    height: 140,
+  },
+  completedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    textAlign: 'center',
   },
 });

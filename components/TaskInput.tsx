@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 
-
 interface TaskInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -19,9 +18,10 @@ interface TaskInputProps {
   onNew?: () => void;
   routineName: string;
   onRoutineNameChange: (name: string) => void;
+  isRunning?: boolean;
 }
 
-export function TaskInput({ value, onChange, onSave, onLoad, onNew, routineName, onRoutineNameChange }: TaskInputProps) {
+export function TaskInput({ value, onChange, onSave, onLoad, onNew, routineName, onRoutineNameChange, isRunning = false }: TaskInputProps) {
   const inputRef = useRef<TextInput>(null);
 
   return (
@@ -55,14 +55,20 @@ export function TaskInput({ value, onChange, onSave, onLoad, onNew, routineName,
           <Save size={16} color="#6b7280" />
           <Text style={styles.buttonText}>저장</Text>
         </Pressable>
-        <Pressable style={styles.button} onPress={onLoad}>
-          <Upload size={16} color="#6b7280" />
-          <Text style={styles.buttonText}>불러오기</Text>
+        <Pressable
+          style={[styles.button, isRunning && styles.buttonDisabled]}
+          onPress={isRunning ? undefined : onLoad}
+        >
+          <Upload size={16} color={isRunning ? '#d1d5db' : '#6b7280'} />
+          <Text style={[styles.buttonText, isRunning && styles.buttonTextDisabled]}>불러오기</Text>
         </Pressable>
         {onNew ? (
-          <Pressable style={styles.button} onPress={onNew}>
-            <FilePlus size={16} color="#6b7280" />
-            <Text style={styles.buttonText}>새 루틴</Text>
+          <Pressable
+            style={[styles.button, isRunning && styles.buttonDisabled]}
+            onPress={isRunning ? undefined : onNew}
+          >
+            <FilePlus size={16} color={isRunning ? '#d1d5db' : '#6b7280'} />
+            <Text style={[styles.buttonText, isRunning && styles.buttonTextDisabled]}>새 루틴</Text>
           </Pressable>
         ) : null}
       </View>
@@ -78,7 +84,7 @@ const styles = StyleSheet.create({
     minHeight: 180,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fafaf9',
+    backgroundColor: '#FAF7F2',
     borderRadius: 16,
   },
   input: {
@@ -101,10 +107,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f4',
     borderRadius: 12,
   },
+  buttonDisabled: {
+    backgroundColor: '#f5f5f4',
+    opacity: 0.4,
+  },
   buttonText: {
     color: '#374151',
     fontSize: 14,
     fontWeight: '500',
+  },
+  buttonTextDisabled: {
+    color: '#9ca3af',
   },
   nameInput: {
     fontSize: 15,
@@ -112,7 +125,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: '#fafaf9',
+    backgroundColor: '#FAF7F2',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
