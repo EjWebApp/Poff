@@ -182,12 +182,38 @@ Poff/
   - `scheduled_notifications` 테이블에서 발송 예약된 이메일 처리
   - Resend API 사용 (무료 3000건/월)
 
+#### 이메일 알림 동작 방식
+
+**사용자 입장:**
+- 로그인 상태에서 루틴을 시작하면, 전체 루틴이 끝날 예상 시각에 완료 메일이 자동 발송됨
+- 작업을 패스해도 메일 발송 시각은 루틴 시작 시 계산된 원래 예상 완료 시각 기준
+
+**기술적 흐름:**
+1. 루틴 시작 (`handleStart`) → `scheduled_notifications` 테이블에 예상 완료 시각 등록
+2. pg_cron이 **5분마다** Edge Function(`send-routine-emails`) 호출
+3. Edge Function이 `scheduled_at <= 현재시각 AND sent = false` 인 행 조회
+4. Resend API로 메일 발송 → `sent = true` 업데이트
+
+**주의사항:**
+- 발신자(`from`)는 Resend 인증 도메인이어야 함. 테스트 시 `onboarding@resend.dev` 사용 가능 (수신자가 Resend 가입 이메일인 경우만)
+- `service_role` 키는 `eyJ...`로 시작하는 JWT 형식 사용 (`sb_secret_...` 아님)
+- pg_cron과 pg_net 익스텐션 둘 다 활성화 필요 (Dashboard → Database → Extensions)
+
 #### 이메일 알림 설정 방법 (수동 작업 필요)
 
 1. [Resend](https://resend.com) 가입 후 API 키 발급
 2. Supabase 대시보드 > Edge Functions > Secrets에 `RESEND_API_KEY` 추가
 3. `supabase/functions/send-routine-emails/index.ts`의 `from` 주소를 인증된 도메인으로 변경
-4. Edge Function 배포 후 아래 SQL을 Supabase SQL Editor에서 실행 (5분마다 자동 호출):
+4. Edge Function 배포 (Supabase CLI를 npm dev dependency로 설치):
+
+```sh
+npm install supabase --save-dev
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase functions deploy send-routine-emails
+```
+
+5. 배포 후 아래 SQL을 Supabase SQL Editor에서 실행 (5분마다 자동 호출):
 
 ```sql
 select cron.schedule(

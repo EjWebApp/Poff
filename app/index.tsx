@@ -29,7 +29,7 @@ import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import { Redirect, router } from 'expo-router';
-import { ChefHat, Info, LogIn, LogOut } from 'lucide-react-native';
+import { Info, LogIn, LogOut } from 'lucide-react-native';
 import { TaskInput } from '../components/TaskInput';
 import { TaskList } from '../components/TaskList';
 import type { Task } from '../components/types';
@@ -835,7 +835,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <ChefHat size={28} color="#FF8B7B" />
+              <Image source={require('../assets/main_char.png')} style={styles.headerIcon} resizeMode="contain" />
               <Text style={styles.title}>Poff</Text>
             </View>
             {isSupabaseConfigured() && (
@@ -1020,6 +1020,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  headerIcon: {
+    width: 28,
+    height: 28,
   },
   authBtn: {
     flexDirection: 'row',

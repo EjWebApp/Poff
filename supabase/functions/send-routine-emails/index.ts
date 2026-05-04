@@ -70,7 +70,7 @@ async function sendEmail(to: string, routineName: string): Promise<boolean> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Poff <noreply@yourdomain.com>', // Resend에서 인증한 도메인으로 변경
+        from: 'Poff <onboarding@resend.dev>',
         to: [to],
         subject: `✅ "${routineName}" 루틴 완료!`,
         html: `
