@@ -1,0 +1,6 @@
+<resources>
+  <string name="app_name">Poff</string>
+  <string name="kakao_app_key">603e68012b4956d21cb7839006103653</string>
+  <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+  <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+</resources>

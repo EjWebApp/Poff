@@ -34,7 +34,8 @@ export function TaskList({ tasks, currentIndex, progress = 0, schedule, passedTa
       <Text style={styles.label}>오늘의 계획</Text>
       {tasks.length === 0 ? (
         <View style={styles.empty}>
-<Text style={styles.emptyText}>오늘의 계획을 입력하고 시작하세요</Text>        </View>
+          <Text style={styles.emptyText}>오늘의 계획을 입력하고 시작하세요</Text>
+        </View>
       ) : (
         <View style={styles.list}>
           {tasks.map((task, index) => {

@@ -265,3 +265,12 @@ isPaused = true → 시간 계산 없이
   → 일시정지 당시 currentTaskIndex로 복원
   → 남은 시간도 일시정지 시점 기준으로 그대로 표시
 << 핵심: 타이머가 "실시간으로 어딘가에서 계속 돌고 있는" 게 아니라, 시작 시각을 저장해뒀다가 재진입 시 "지금이 몇 분째인지" 역산하는 방식이에요.>>
+
+
+### 자바&안드로이드 환경변수 설정
+[System.Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Android\Android Studio\jbr", "User")
+[System.Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")
+
+$currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+[System.Environment]::SetEnvironmentVariable("PATH", "$currentPath;$env:LOCALAPPDATA\Android\Sdk\platform-tools", "User")
+

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
 import { getSupabase } from './supabase';
 
 type AuthState = {
@@ -50,16 +50,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithOtp = async (email: string, emailRedirectTo?: string) => {
     const supabase = getSupabase();
     if (!supabase) {
-      console.warn('[Auth] signInWithOtp: Supabase not configured');
       return { error: new Error('Supabase not configured') };
     }
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
@@ -72,30 +73,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithKakao = async () => {
     const supabase = getSupabase();
     if (!supabase) {
-      console.warn('[Auth] signInWithKakao: Supabase not configured');
       return { error: new Error('Supabase not configured') };
     }
-    const redirectTo =
-      Platform.OS === 'web'
-        ? `${window.location.origin}/`
-        : 'poff://';
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'kakao',
-      options: { redirectTo },
-    });
-    if (error) return { error };
-    if (data?.url) {
-      if (Platform.OS === 'web') {
-        window.location.href = data.url;
-      } else {
-        console.log('[Auth] signInWithKakao: opening auth session', {
-          url: data.url,
-          redirectTo,
-        });
-        await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      }
+
+    if (Platform.OS === 'web') {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      return { error: error ?? null };
     }
-    return { error: null };
+
+    try {
+      const { accessToken } = await kakaoLogin();
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/kakao-native-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ kakao_access_token: accessToken }),
+      });
+
+      const json = await res.json();
+      if (json.error) return { error: new Error(json.error) };
+
+      const { error } = await supabase.auth.setSession({
+        access_token: json.access_token,
+        refresh_token: json.refresh_token,
+      });
+      return { error: error ?? null };
+    } catch (e: any) {
+      return { error: new Error(e?.message ?? '카카오 로그인 실패') };
+    }
   };
 
   const signOut = async () => {

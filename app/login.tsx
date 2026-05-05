@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 export default function LoginScreen() {
   const { signInWithKakao } = useAuth();
   const [kakaoLoading, setKakaoLoading] = useState(false);
+  const signingIn = useRef(false);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -33,6 +34,8 @@ export default function LoginScreen() {
   }
 
   const handleSignInWithKakao = async () => {
+    if (signingIn.current) return;
+    signingIn.current = true;
     setKakaoLoading(true);
     try {
       const { error } = await signInWithKakao();
@@ -42,8 +45,11 @@ export default function LoginScreen() {
           text1: '카카오 로그인 실패',
           text2: error.message,
         });
+      } else {
+        router.replace('/');
       }
     } finally {
+      signingIn.current = false;
       setKakaoLoading(false);
     }
   };

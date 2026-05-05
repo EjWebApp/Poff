@@ -4,7 +4,13 @@
       "Bash(npx expo *)",
       "Bash(npm show *)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Read(//c/Program Files/Android/Android Studio/**)",
+      "Read(//c/Program Files/Android/**)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "Read(//c/Program Files/Android Studio/**)",
+      "PowerShell(Get-Command java -ErrorAction SilentlyContinue)",
+      "WebFetch(domain:developers.kakao.com)"
     ]
   }
 }

@@ -103,9 +103,10 @@ export default function HomeScreen() {
   > | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
     loadInitialData();
     checkNotificationPermission();
-  }, []);
+  }, [isLoading]);
 
   // 항상 최신 세션 상태를 즉시 저장할 수 있는 함수 ref
   const saveNowRef = useRef<(() => void) | null>(null);
@@ -1022,8 +1023,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerIcon: {
-    width: 28,
-    height: 28,
+    width: 70,
+    height: 70,
+    transform: [{ scaleX: -1 }],
   },
   authBtn: {
     flexDirection: 'row',
