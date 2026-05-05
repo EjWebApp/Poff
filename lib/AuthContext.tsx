@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
+import { login as kakaoLogin, logout as kakaoLogout } from '@react-native-seoul/kakao-login';
 import { getSupabase } from './supabase';
 
 const AUTO_LOGIN_KEY = 'poff_auto_login';
@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(AUTO_LOGIN_KEY).then(val => {
-      setAutoLoginState(val === 'true');
+      // null = 한 번도 설정 안 됨 → 기본값 true
+      setAutoLoginState(val === null ? true : val === 'true');
       setAutoLoginReady(true);
     });
   }, []);
@@ -57,8 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setState({ session: session ?? null, user: session?.user ?? null, isLoading: false });
-      if (event === 'SIGNED_IN' && session) {
+      // 웹 OAuth 리다이렉트 후 복귀 시에만 여기서 세팅
+      // Android는 signInWithKakao()에서 직접 setLoggedInThisSession(true) 호출
+      if (event === 'SIGNED_IN' && session && Platform.OS === 'web') {
         setLoggedInThisSession(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setLoggedInThisSession(false);
       }
     });
 
@@ -123,6 +129,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (Platform.OS !== 'web') {
+      try {
+        await kakaoLogout();
+      } catch (e) {
+        console.warn('[signOut] 카카오 로그아웃 실패:', e);
+      }
+    }
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
     setLoggedInThisSession(false);

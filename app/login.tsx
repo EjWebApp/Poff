@@ -13,9 +13,9 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
-  const { signInWithKakao, setAutoLogin } = useAuth();
+  const { signInWithKakao, setAutoLogin, autoLogin } = useAuth();
   const [kakaoLoading, setKakaoLoading] = useState(false);
-  const [autoLoginChecked, setAutoLoginChecked] = useState(false);
+  const [autoLoginChecked, setAutoLoginChecked] = useState(autoLogin);
   const signingIn = useRef(false);
 
   if (!isSupabaseConfigured()) {

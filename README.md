@@ -274,3 +274,101 @@ isPaused = true → 시간 계산 없이
 $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
 [System.Environment]::SetEnvironmentVariable("PATH", "$currentPath;$env:LOCALAPPDATA\Android\Sdk\platform-tools", "User")
 
+---
+
+### 2026-05-05 — 카카오 로그인 전면 재구현 + 자동 로그인 + 설정 화면
+
+#### 배경
+
+기존 방식(`WebBrowser.openAuthSessionAsync` + Supabase OAuth)은 Android에서 딥링크 리다이렉트가 불안정해 로그인 버튼을 여러 번 눌러야 하는 문제가 있었음.
+
+#### 변경된 구조
+
+| 구분 | 이전 | 이후 |
+|---|---|---|
+| Android 로그인 | WebBrowser + Supabase OAuth | 카카오 네이티브 SDK → Edge Function |
+| 웹 로그인 | Supabase OAuth | Supabase OAuth (유지) |
+| 계정 공유 | 불가 | 카카오 이메일 기준 웹/앱 동일 계정 |
+| 자동 로그인 | 항상 자동 | 옵션으로 선택 |
+
+**Android 네이티브 로그인 흐름:**
+1. `@react-native-seoul/kakao-login` 으로 카카오 SDK 호출 → `accessToken` 획득
+2. `kakao-native-auth` Edge Function 에 accessToken 전달
+3. Edge Function이 카카오 API(`/v2/user/me`)로 유저 정보 검증
+4. Supabase magic link 토큰 발급 → 세션 반환
+5. 앱에서 `supabase.auth.setSession()` 으로 로그인 완료
+
+**웹 OAuth 흐름:**
+1. `supabase.auth.signInWithOAuth({ provider: 'kakao' })` 으로 카카오 인증 페이지 이동
+2. 인증 후 Vercel 앱으로 리다이렉트, URL 해시에서 세션 자동 파싱
+3. `SIGNED_IN` 이벤트 발생 → `loggedInThisSession = true` → 메인 화면 유지
+
+#### 추가된 파일
+
+- **`supabase/functions/kakao-native-auth/index.ts`** — Android 카카오 로그인용 Edge Function
+  - 카카오 accessToken 검증 → Supabase 유저 생성(없으면) → 세션 반환
+  - 배포: `npx supabase functions deploy kakao-native-auth`
+
+- **`app/settings.tsx`** — 설정 화면
+  - 자동 로그인 토글 (AsyncStorage `poff_auto_login` 키로 저장)
+  - 계정 정보 (이메일, 로그인 방식)
+  - 로그아웃 버튼
+
+#### 변경된 파일
+
+- **`lib/AuthContext.tsx`**
+  - `autoLogin`: AsyncStorage에서 로드한 자동 로그인 설정
+  - `loggedInThisSession`: 현재 앱 실행 중 로그인 여부 (앱 재시작 시 초기화)
+  - `isAuthenticated`: `session && (autoLogin || loggedInThisSession)`
+  - `signOut()`: 로그아웃 시 `autoLogin = false` 저장
+
+- **`app/_layout.tsx`**
+  - `AuthGate` 컴포넌트 분리 — `AuthProvider` 안에서 `useAuth()` 사용 가능
+  - `isAuthenticated` 기반 라우팅: 비인증 → `/login`, 인증 상태에서 로그인 화면 → `/`
+
+- **`app/login.tsx`**
+  - 자동 로그인 Switch 추가 — 체크 후 로그인 시 `autoLogin = true` 저장
+  - 로그인 성공 후 `_layout.tsx`의 라우팅이 자동으로 메인 화면으로 이동
+
+- **`app/index.tsx`**
+  - 헤더 우측 로그인/로그아웃 버튼 → 설정 아이콘(⚙️)으로 교체
+  - 인증 라우팅은 `_layout.tsx`에서 처리하므로 개별 리다이렉트 제거
+
+#### Android 패키지명 변경
+
+`com.poff.app` → `com.crint.poff.app`
+
+변경된 파일:
+- `app.json` (`ios.bundleIdentifier`, `android.package`)
+- `android/app/build.gradle` (`namespace`, `applicationId`, `manifestPlaceholders`)
+- `android/app/src/main/java/com/crint/poff/app/` (Kotlin 파일 이동)
+- `android/app/src/main/res/values/strings.xml` (`kakao_app_key` 추가)
+
+#### 꼭 알아야 할 것들
+
+**카카오 개발자 콘솔 설정 (developers.kakao.com)**
+- 플랫폼 > Android: 패키지명 `com.crint.poff.app`, 키 해시 `Xo8WBi6jzSxKDVR4drqm84yr9iU=`
+- 카카오 로그인 > OpenID Connect **활성화** (ID 토큰 발급용)
+- 카카오 로그인 > Redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+- 동의항목: `카카오계정(이메일)` 필수 동의 설정
+
+**Supabase 설정**
+- Authentication > Providers > Kakao: Client ID = **REST API 키** (네이티브 앱 키 아님)
+- Authentication > URL Configuration:
+  - Site URL: `https://poff-eight.vercel.app`
+  - Redirect URLs: `https://poff-eight.vercel.app/**`
+- Edge Function 환경변수: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` 자동 주입됨 (별도 설정 불필요)
+
+**Android 빌드**
+- JAVA_HOME: `C:\Program Files\Android\Android Studio\jbr`
+- Android SDK: `C:\Users\n0107\AppData\Local\Android\Sdk`
+- Gradle 최소 버전: 8.13
+- 빌드 명령: `npx expo run:android`
+- 카카오 Maven 저장소: `android/build.gradle`에 `https://devrepo.kakao.com/nexus/content/groups/public/` 추가됨
+
+**자동 로그인 동작 원리**
+- `AsyncStorage`의 `poff_auto_login` 키로 설정 저장
+- `autoLogin = false`(기본): 앱 재시작 시 항상 로그인 화면 표시 (저장된 세션 무시)
+- `autoLogin = true`: 저장된 Supabase 세션이 있으면 바로 메인 화면
+- 로그아웃 시 자동으로 `autoLogin = false`로 초기화
+
