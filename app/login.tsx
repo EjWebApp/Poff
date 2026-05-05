@@ -5,18 +5,17 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  Switch,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
 import { useAuth } from '../lib/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
-  const { signInWithKakao } = useAuth();
+  const { signInWithKakao, setAutoLogin } = useAuth();
   const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [autoLoginChecked, setAutoLoginChecked] = useState(false);
   const signingIn = useRef(false);
 
   if (!isSupabaseConfigured()) {
@@ -26,9 +25,6 @@ export default function LoginScreen() {
           Supabase가 설정되지 않았습니다.{'\n'}
           .env에 EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY를 설정하세요.
         </Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>돌아가기</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -40,13 +36,9 @@ export default function LoginScreen() {
     try {
       const { error } = await signInWithKakao();
       if (error) {
-        Toast.show({
-          type: 'error',
-          text1: '카카오 로그인 실패',
-          text2: error.message,
-        });
+        Toast.show({ type: 'error', text1: '카카오 로그인 실패', text2: error.message });
       } else {
-        router.replace('/');
+        if (autoLoginChecked) await setAutoLogin(true);
       }
     } finally {
       signingIn.current = false;
@@ -55,10 +47,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.header}>
           <Image
@@ -81,12 +70,18 @@ export default function LoginScreen() {
             <Text style={styles.kakaoBtnText}>카카오로 로그인</Text>
           )}
         </TouchableOpacity>
-      </View>
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backBtnText}>돌아가기</Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
+        <View style={styles.autoLoginRow}>
+          <Text style={styles.autoLoginText}>자동 로그인</Text>
+          <Switch
+            value={autoLoginChecked}
+            onValueChange={setAutoLoginChecked}
+            trackColor={{ false: '#e5e7eb', true: '#FEE500' }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -101,7 +96,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 24,
-    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -137,13 +131,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  backBtn: {
-    alignSelf: 'center',
-    paddingVertical: 12,
+  autoLoginRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
   },
-  backBtnText: {
+  autoLoginText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6b7280',
   },
   character: {
     width: 120,
@@ -154,6 +153,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 24,
   },
 });

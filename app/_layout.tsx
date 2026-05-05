@@ -1,9 +1,10 @@
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import Toast from 'react-native-toast-message';
-import { AuthProvider } from '../lib/AuthContext';
-import { useFonts, Pacifico_400Regular } from '@expo-google-fonts/pacifico';
 import { View, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { AuthProvider, useAuth } from '../lib/AuthContext';
+import { useFonts, Pacifico_400Regular } from '@expo-google-fonts/pacifico';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Pacifico_400Regular });
@@ -18,6 +19,27 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
+}
+
+function AuthGate() {
+  const { isAuthenticated, isLoading, autoLoginReady } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading || !autoLoginReady) return;
+    if (!isAuthenticated && pathname !== '/login') {
+      router.replace('/login');
+    } else if (isAuthenticated && pathname === '/login') {
+      router.replace('/');
+    }
+  }, [isAuthenticated, isLoading, autoLoginReady, pathname]);
+
+  return (
+    <>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -26,6 +48,6 @@ export default function RootLayout() {
         }}
       />
       <Toast />
-    </AuthProvider>
+    </>
   );
 }

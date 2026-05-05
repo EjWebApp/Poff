@@ -28,8 +28,8 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
-import { Redirect, router } from 'expo-router';
-import { Info, LogIn, LogOut } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Info, Settings } from 'lucide-react-native';
 import { TaskInput } from '../components/TaskInput';
 import { TaskList } from '../components/TaskList';
 import type { Task } from '../components/types';
@@ -62,7 +62,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function HomeScreen() {
-  const { session, user, signOut, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // 루틴 데이터
   const [inputText, setInputText] = useState('');
@@ -812,9 +812,6 @@ export default function HomeScreen() {
         </View>
       );
     }
-    if (!session) {
-      return <Redirect href="/login" />;
-    }
   }
 
   return (
@@ -842,19 +839,9 @@ export default function HomeScreen() {
             {isSupabaseConfigured() && (
               <TouchableOpacity
                 style={styles.authBtn}
-                onPress={() => user ? signOut() : router.push('/login')}
+                onPress={() => router.push('/settings')}
               >
-                {user ? (
-                  <>
-                    <LogOut size={18} color="#6b7280" />
-                    <Text style={styles.authBtnText}>로그아웃</Text>
-                  </>
-                ) : (
-                  <>
-                    <LogIn size={18} color="#6b7280" />
-                    <Text style={styles.authBtnText}>로그인</Text>
-                  </>
-                )}
+                <Settings size={22} color="#6b7280" />
               </TouchableOpacity>
             )}
           </View>
