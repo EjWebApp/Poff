@@ -55,8 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({ session: session ?? null, user: session?.user ?? null, isLoading: false });
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setState({ session: session ?? null, user: session?.user ?? null, isLoading: false });
+      if (event === 'SIGNED_IN' && session) {
+        setLoggedInThisSession(true);
+      }
     });
 
     return () => subscription.unsubscribe();
