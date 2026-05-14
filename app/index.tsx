@@ -20,9 +20,15 @@ import {
   clearActiveSession,
   scheduleCompletionEmail,
   deleteRoutine,
+  savePushToken,
+  saveTaskPushNotifications,
+  cancelTaskPushNotifications,
+  updateTaskPushNotifications,
   type Routine,
   type ActiveSessionData,
+  type TaskPushNotif,
 } from '../lib/routineStorage';
+import Constants from 'expo-constants';
 import { useAuth } from '../lib/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import * as Notifications from 'expo-notifications';
@@ -53,7 +59,6 @@ type PermissionStatusType =
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
@@ -96,6 +101,7 @@ export default function HomeScreen() {
   const pauseAtRef = useRef(0);
   const originalScheduleRef = useRef<{ startTime: number; endTime: number }[] | null>(null);
   const memoDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionPushIdRef = useRef<string | null>(null);
 
   // 세션 기준 데이터 ref (시작 시점에 고정, finishTask 등 async 콜백에서 사용)
   const sessionBaseRef = useRef<Pick<ActiveSessionData,
@@ -308,6 +314,17 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [currentIndex, tasks.length, isPaused]);
 
+  async function registerPushToken() {
+    if (Platform.OS === 'web') return;
+    try {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+      const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+      await savePushToken(token.data);
+    } catch (e) {
+      console.warn('[push] registerPushToken 실패:', e);
+    }
+  }
+
   async function checkNotificationPermission() {
     try {
       const { status } = await Notifications.getPermissionsAsync();
@@ -337,22 +354,15 @@ export default function HomeScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch { }
 
-    Toast.show({
-      type: 'info',
-      text1: title,
-      text2: body,
-      position: 'top',
-      visibilityTime: options?.visibilityTime ?? 4000,
-    });
-
-    try {
-      if (permission === 'granted') {
-        await Notifications.scheduleNotificationAsync({
-          content: { title, body, sound: true },
-          trigger: null,
-        });
-      }
-    } catch { }
+    if (Platform.OS === 'web') {
+      Toast.show({
+        type: 'info',
+        text1: title,
+        text2: body,
+        position: 'top',
+        visibilityTime: options?.visibilityTime ?? 4000,
+      });
+    }
   }
 
   function generateRoutineName(): string {
@@ -545,6 +555,19 @@ export default function HomeScreen() {
         }
         adjustedSchedule = adj;
         setSchedule(adj);
+
+        // 패스로 스케줄 변경 → 백엔드 미발송 알림 재등록
+        if (sessionPushIdRef.current && next < tasks.length) {
+          const updatedNotifs: TaskPushNotif[] = adj.slice(next).map((slot, i) => ({
+            taskIndex: next + i,
+            title: next + i === tasks.length - 1 ? '🎉 루틴 완료' : '⏰ 태스크 완료',
+            body: next + i === tasks.length - 1
+              ? `${tasks[next + i].title} 완료! 오늘 수고했어.`
+              : `${tasks[next + i].title} 완료! 다음으로 넘어갑니다.`,
+            scheduledAt: new Date(slot.endTime),
+          }));
+          updateTaskPushNotifications(sessionPushIdRef.current, updatedNotifs).catch(() => {});
+        }
       }
       notify('⏭ 패스', `${task.title} 건너뛰기 · ${saved} 절약`, { visibilityTime: 7000 });
     } else {
@@ -576,6 +599,14 @@ export default function HomeScreen() {
       setProgress(1);
       notify('🎉 전체 루틴 완료', '오늘 계획 끝! 수고했어.');
       clearActiveSession().catch(() => { });
+      const base = sessionBaseRef.current;
+      if (base) {
+        saveRoutine(
+          { inputText: base.inputText, reflection: base.reflection, taskMemos, subtitle: base.subtitle },
+          base.routineId,
+          base.routineName
+        ).catch(() => { });
+      }
     }
   }
 
@@ -654,12 +685,33 @@ export default function HomeScreen() {
       );
     }
 
-    // 7. 루틴 시작
+    // 7. 백엔드 푸시 알림 예약 (앱 종료/백그라운드 대응)
+    if (Platform.OS !== 'web' && user) {
+      await registerPushToken();
+      const sessionId = new Date(sessionStart).toISOString();
+      sessionPushIdRef.current = sessionId;
+      const pushNotifs: TaskPushNotif[] = parsed.tasks.map((task, i) => ({
+        taskIndex: i,
+        title: i === parsed.tasks.length - 1 ? '🎉 루틴 완료' : '⏰ 태스크 완료',
+        body: i === parsed.tasks.length - 1
+          ? `${task.title} 완료! 오늘 수고했어.`
+          : `${task.title} 완료! 다음으로 넘어갑니다.`,
+        scheduledAt: new Date(initialSchedule[i].endTime),
+      }));
+      saveTaskPushNotifications(sessionId, pushNotifs).catch(() => {});
+    }
+
+    // 8. 루틴 시작
     setTasks(parsed.tasks);
     startTask(0, sessionStart);
   }
 
   function handleStop(skipClearSession = false) {
+    if (sessionPushIdRef.current) {
+      cancelTaskPushNotifications(sessionPushIdRef.current).catch(() => {});
+      sessionPushIdRef.current = null;
+    }
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -682,6 +734,14 @@ export default function HomeScreen() {
 
     if (!skipClearSession) {
       clearActiveSession().catch(() => { });
+      const base = sessionBaseRef.current;
+      if (base && currentIndex >= 0) {
+        saveRoutine(
+          { inputText: base.inputText, reflection: base.reflection, taskMemos, subtitle: base.subtitle },
+          base.routineId,
+          base.routineName
+        ).catch(() => { });
+      }
     }
   }
 
@@ -1007,7 +1067,7 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
   headerIcon: {
     width: 70,

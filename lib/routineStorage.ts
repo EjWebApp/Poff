@@ -387,3 +387,117 @@ export async function scheduleCompletionEmail(
     console.warn('[routineStorage] scheduleCompletionEmail error:', e);
   }
 }
+
+// ===================== PUSH NOTIFICATIONS =====================
+
+/** Expo Push Token 저장 */
+export async function savePushToken(token: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase || !isSupabaseConfigured()) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('push_tokens').upsert(
+      { user_id: user.id, token, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  } catch (e) {
+    console.warn('[routineStorage] savePushToken error:', e);
+  }
+}
+
+export type TaskPushNotif = {
+  taskIndex: number;
+  title: string;
+  body: string;
+  scheduledAt: Date;
+};
+
+/** 세션의 전체 태스크 푸시 알림 예약 */
+export async function saveTaskPushNotifications(
+  sessionId: string,
+  notifications: TaskPushNotif[]
+): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase || !isSupabaseConfigured()) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const rows = notifications.map(n => ({
+      user_id: user.id,
+      session_id: sessionId,
+      task_index: n.taskIndex,
+      title: n.title,
+      body: n.body,
+      scheduled_at: n.scheduledAt.toISOString(),
+    }));
+    await supabase.from('task_push_notifications').insert(rows);
+  } catch (e) {
+    console.warn('[routineStorage] saveTaskPushNotifications error:', e);
+  }
+}
+
+/** 앱이 포그라운드에서 태스크를 처리했을 때 백엔드 알림 발송 취소 */
+export async function markTaskPushNotificationSent(
+  sessionId: string,
+  taskIndex: number
+): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase || !isSupabaseConfigured()) return;
+  try {
+    await supabase
+      .from('task_push_notifications')
+      .update({ sent: true })
+      .eq('session_id', sessionId)
+      .eq('task_index', taskIndex);
+  } catch (e) {
+    console.warn('[routineStorage] markTaskPushNotificationSent error:', e);
+  }
+}
+
+/** 세션의 미발송 푸시 알림 전체 취소 (루틴 중단 시) */
+export async function cancelTaskPushNotifications(sessionId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase || !isSupabaseConfigured()) return;
+  try {
+    await supabase
+      .from('task_push_notifications')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('sent', false);
+  } catch (e) {
+    console.warn('[routineStorage] cancelTaskPushNotifications error:', e);
+  }
+}
+
+/** 패스 등으로 스케줄이 바뀐 경우 미발송 알림 재등록 */
+export async function updateTaskPushNotifications(
+  sessionId: string,
+  notifications: TaskPushNotif[]
+): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase || !isSupabaseConfigured()) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // 미발송분만 삭제 후 재등록
+    await supabase
+      .from('task_push_notifications')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('sent', false);
+    if (notifications.length > 0) {
+      const rows = notifications.map(n => ({
+        user_id: user.id,
+        session_id: sessionId,
+        task_index: n.taskIndex,
+        title: n.title,
+        body: n.body,
+        scheduled_at: n.scheduledAt.toISOString(),
+      }));
+      await supabase.from('task_push_notifications').insert(rows);
+    }
+  } catch (e) {
+    console.warn('[routineStorage] updateTaskPushNotifications error:', e);
+  }
+}

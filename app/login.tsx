@@ -13,9 +13,8 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
-  const { signInWithKakao, setAutoLogin, autoLogin } = useAuth();
+  const { signInWithKakao, autoLogin, setAutoLogin } = useAuth();
   const [kakaoLoading, setKakaoLoading] = useState(false);
-  const [autoLoginChecked, setAutoLoginChecked] = useState(autoLogin);
   const signingIn = useRef(false);
 
   if (!isSupabaseConfigured()) {
@@ -37,8 +36,6 @@ export default function LoginScreen() {
       const { error } = await signInWithKakao();
       if (error) {
         Toast.show({ type: 'error', text1: '카카오 로그인 실패', text2: error.message });
-      } else {
-        if (autoLoginChecked) await setAutoLogin(true);
       }
     } finally {
       signingIn.current = false;
@@ -74,8 +71,8 @@ export default function LoginScreen() {
         <View style={styles.autoLoginRow}>
           <Text style={styles.autoLoginText}>자동 로그인</Text>
           <Switch
-            value={autoLoginChecked}
-            onValueChange={setAutoLoginChecked}
+            value={autoLogin}
+            onValueChange={setAutoLogin}
             trackColor={{ false: '#e5e7eb', true: '#FEE500' }}
             thumbColor="#ffffff"
           />

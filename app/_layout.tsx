@@ -25,18 +25,18 @@ export default function RootLayout() {
 }
 
 function AuthGate() {
-  const { isAuthenticated, isLoading, autoLoginReady } = useAuth();
+  const { isAuthenticated, isLoading, autoLoginReady, isAutoLoggingIn } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading || !autoLoginReady) return;
+    if (isLoading || !autoLoginReady || isAutoLoggingIn) return;
     if (!isAuthenticated && pathname !== '/login') {
       router.replace('/login');
     } else if (isAuthenticated && pathname === '/login') {
       router.replace('/');
     }
-  }, [isAuthenticated, isLoading, autoLoginReady, pathname]);
+  }, [isAuthenticated, isLoading, autoLoginReady, isAutoLoggingIn, pathname]);
 
   return (
     <>

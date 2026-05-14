@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +17,7 @@ type AuthContextValue = AuthState & {
   autoLogin: boolean;
   autoLoginReady: boolean;
   isAuthenticated: boolean;
+  isAutoLoggingIn: boolean;
   setAutoLogin: (value: boolean) => Promise<void>;
   signInWithOtp: (email: string, emailRedirectTo?: string) => Promise<{ error: Error | null }>;
   signInWithKakao: () => Promise<{ error: Error | null }>;
@@ -34,6 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [autoLogin, setAutoLoginState] = useState(false);
   const [autoLoginReady, setAutoLoginReady] = useState(false);
   const [loggedInThisSession, setLoggedInThisSession] = useState(false);
+  const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(Platform.OS !== 'web');
+  const autoLoginAttemptedRef = useRef(false);
 
   const isAuthenticated = !!state.session && (autoLogin || loggedInThisSession);
 
@@ -128,7 +131,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // autoLogin=true이고 세션 없으면 카카오 캐시로 자동 재로그인
+  useEffect(() => {
+    if (!autoLoginReady || state.isLoading) return;
+    if (state.session || !autoLogin || Platform.OS === 'web' || autoLoginAttemptedRef.current) {
+      setIsAutoLoggingIn(false);
+      return;
+    }
+    autoLoginAttemptedRef.current = true;
+    signInWithKakao().finally(() => setIsAutoLoggingIn(false));
+  }, [autoLoginReady, state.isLoading, state.session, autoLogin]);
+
   const signOut = async () => {
+    autoLoginAttemptedRef.current = true;
     if (Platform.OS !== 'web') {
       try {
         await kakaoLogout();
@@ -139,7 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     if (supabase) await supabase.auth.signOut();
     setLoggedInThisSession(false);
-    await setAutoLogin(false);
   };
 
   const value: AuthContextValue = {
@@ -147,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     autoLogin,
     autoLoginReady,
     isAuthenticated,
+    isAutoLoggingIn,
     setAutoLogin,
     signInWithOtp,
     signInWithKakao,

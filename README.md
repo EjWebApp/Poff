@@ -1,5 +1,7 @@
 # Poff (React Native / Expo)
 
+최근 업데이트: 2026-05-05
+
 할 일 완료 → "Poff!" 하고 사라짐. 하루 끝 → 오늘이 "Poff!". 스트레스 → Poff!
 
 ## 기능
@@ -371,4 +373,58 @@ $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
 - `autoLogin = false`(기본): 앱 재시작 시 항상 로그인 화면 표시 (저장된 세션 무시)
 - `autoLogin = true`: 저장된 Supabase 세션이 있으면 바로 메인 화면
 - 로그아웃 시 자동으로 `autoLogin = false`로 초기화
+
+---
+
+### 2026-05-05 — 로그아웃 버그 수정 + 알림 개선
+
+#### 1. 자동로그인 ON 상태에서 로그아웃 버그 수정 (`lib/AuthContext.tsx`)
+
+**문제**
+자동로그인이 켜진 상태에서 설정 화면의 로그아웃 버튼을 누르면, 로그인 화면이 잠깐 뜬 뒤 바로 메인으로 이동하는 버그.
+
+**원인**
+앱 시작 시 Supabase 세션이 이미 유효하면 자동로그인 effect가 실행되지 않아 `autoLoginAttemptedRef.current`가 `false`로 남음.
+이후 로그아웃으로 세션이 클리어되면 조건이 충족돼 카카오 캐시 토큰으로 자동 재로그인.
+
+**수정**
+`signOut()` 첫 줄에 `autoLoginAttemptedRef.current = true` 추가.
+
+---
+
+#### 2. 헤더 로고 ↔ Poff 텍스트 간격 조정 (`app/index.tsx`)
+
+`headerLeft` 스타일의 `gap`을 12 → 6으로 줄여 로고 이미지와 Poff 텍스트를 더 가깝게 배치.
+
+---
+
+#### 3. 알림 플랫폼 분리 (`app/index.tsx`)
+
+| 플랫폼 | 알림 방식 |
+|--------|-----------|
+| 웹 | `react-native-toast-message` (인앱 토스트) |
+| 모바일 | `expo-notifications` (시스템 알림) |
+
+기존에는 모바일에서도 Toast가 항상 표시됐으나, `Platform.OS` 분기로 플랫폼에 맞는 알림만 사용하도록 수정.
+
+---
+
+#### 4. 모바일 백그라운드 알림 구현 (`app/index.tsx`)
+
+**문제**
+기존 구조는 JS 타이머가 태스크 완료를 감지해 알림을 보내는 방식이라, 앱이 백그라운드이거나 종료된 상태에서는 알림이 오지 않음.
+
+**수정**
+태스크 시작 시점에 OS에 알림을 미리 예약하는 방식으로 변경.
+
+- `scheduleTaskEndNotif(title, durationMs)` — `TIME_INTERVAL` 트리거로 태스크 종료 시각에 알림 예약
+- `cancelScheduledNotif()` — 예약된 알림 취소
+
+| 이벤트 | 동작 |
+|--------|------|
+| 태스크 시작 | 종료 시각 알림 예약 |
+| 태스크 완료 / 패스 / 중단 | 예약 취소 (앱이 직접 처리) |
+| 일시정지 | 예약 취소 |
+| 재개 | 남은 시간으로 재예약 |
+| 앱 백그라운드/종료 중 태스크 종료 | OS가 예약된 알림 발송 |
 
